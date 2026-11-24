@@ -7,7 +7,7 @@ const heading = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-bric
 const body = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
-  title: 'Tagalong — Packing lists for any trip length',
+  title: 'Stowaway — Packing lists for any trip length',
   description: 'Enter how many days you are traveling and get a ready-made packing list with quantities worked out.',
   generator: 'v0.app',
   icons: {
