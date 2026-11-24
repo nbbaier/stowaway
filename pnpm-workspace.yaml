@@ -1,5 +1,6 @@
 pmOnFail: ignore
 
 minimumReleaseAgeExclude:
-  - '@next/*'
-  - next
+   - "@next/*"
+   - next
+   - js-base
