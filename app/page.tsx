@@ -3,20 +3,33 @@ import Link from "next/link";
 import { LuggageTag } from "@/components/luggage-tag";
 import { NewTripForm } from "@/components/new-trip-form";
 import { SetupNotice } from "@/components/setup-notice";
+import { SignOutButton } from "@/components/sign-out-button";
 import { isDbConfigured, listTrips } from "@/lib/db";
+import { requireSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const configured = isDbConfigured();
-  const trips = configured ? await listTrips() : [];
+  const session = configured ? await requireSession() : null;
+  const trips = session ? await listTrips(session.user.id) : [];
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-5xl flex-col gap-12 px-4 py-12 md:py-20">
       <header className="flex flex-col gap-3">
-        <span className="font-heading text-primary text-sm font-bold tracking-widest uppercase">
-          Stowaway
-        </span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-heading text-primary text-sm font-bold tracking-widest uppercase">
+            Stowaway
+          </span>
+          {session && (
+            <div className="flex items-center gap-3">
+              <span className="text-muted-foreground text-sm">
+                {session.user.email}
+              </span>
+              <SignOutButton />
+            </div>
+          )}
+        </div>
         <h1 className="font-heading max-w-2xl text-4xl font-bold text-balance md:text-6xl">
           Tell us how long. We&apos;ll start the list.
         </h1>

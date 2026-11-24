@@ -14,12 +14,21 @@ const toText = (value: unknown): string => {
   return "";
 };
 
+const ensureTripsUserIdColumn = async (db: Client): Promise<void> => {
+  const columns = await db.execute("PRAGMA table_info(trips)");
+  const hasUserId = columns.rows.some((row) => toText(row.name) === "user_id");
+  if (!hasUserId) {
+    await db.execute("ALTER TABLE trips ADD COLUMN user_id TEXT");
+  }
+};
+
 const initSchema = async (db: Client): Promise<void> => {
   try {
     await db.batch(
       [
         `CREATE TABLE IF NOT EXISTS trips (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT,
           name TEXT NOT NULL,
           days INTEGER NOT NULL,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -35,6 +44,10 @@ const initSchema = async (db: Client): Promise<void> => {
         `CREATE INDEX IF NOT EXISTS items_trip_id_idx ON items(trip_id)`,
       ],
       "write"
+    );
+    await ensureTripsUserIdColumn(db);
+    await db.execute(
+      "CREATE INDEX IF NOT EXISTS trips_user_id_idx ON trips(user_id)"
     );
   } catch (error: unknown) {
     schemaReady = null;
@@ -75,17 +88,21 @@ export interface Item {
   packed: boolean;
 }
 
-export const listTrips = async (): Promise<Trip[]> => {
+export const listTrips = async (userId: string): Promise<Trip[]> => {
   const db = await getDb();
-  const result = await db.execute(`
-    SELECT t.id, t.name, t.days, t.created_at,
-      COUNT(i.id) AS item_count,
-      COALESCE(SUM(i.packed), 0) AS packed_count
-    FROM trips t
-    LEFT JOIN items i ON i.trip_id = t.id
-    GROUP BY t.id
-    ORDER BY t.created_at DESC, t.id DESC
-  `);
+  const result = await db.execute({
+    sql: `
+      SELECT t.id, t.name, t.days, t.created_at,
+        COUNT(i.id) AS item_count,
+        COALESCE(SUM(i.packed), 0) AS packed_count
+      FROM trips t
+      LEFT JOIN items i ON i.trip_id = t.id
+      WHERE t.user_id = ?
+      GROUP BY t.id
+      ORDER BY t.created_at DESC, t.id DESC
+    `,
+    args: [userId],
+  });
   return result.rows.map((row) => ({
     id: Number(row.id),
     name: toText(row.name),
@@ -96,17 +113,21 @@ export const listTrips = async (): Promise<Trip[]> => {
   }));
 };
 
-export const getTripWithItems = async (id: number) => {
+export const getTripWithItems = async (id: number, userId: string) => {
   const db = await getDb();
   const [tripResult, itemsResult] = await db.batch(
     [
       {
-        sql: "SELECT id, name, days, created_at FROM trips WHERE id = ?",
-        args: [id],
+        sql: "SELECT id, name, days, created_at FROM trips WHERE id = ? AND user_id = ?",
+        args: [id, userId],
       },
       {
-        sql: "SELECT id, name, category, quantity, packed FROM items WHERE trip_id = ? ORDER BY id",
-        args: [id],
+        sql: `SELECT id, name, category, quantity, packed
+          FROM items
+          WHERE trip_id = ?
+            AND EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ?)
+          ORDER BY id`,
+        args: [id, id, userId],
       },
     ],
     "read"

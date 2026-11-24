@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { buildDefaultList, CATEGORIES, MAX_DAYS } from "@/lib/defaults";
 import type { Category } from "@/lib/defaults";
+import { requireSession } from "@/lib/session";
 
 const toId = (value: unknown) => {
   const id = Number(value);
@@ -34,6 +35,7 @@ export const createTrip = async (
   _prev: CreateTripState,
   formData: FormData
 ): Promise<CreateTripState> => {
+  const session = await requireSession();
   const name = cleanName(formData.get("name"));
   const days = Number(formData.get("days"));
   if (name === null) {
@@ -48,8 +50,8 @@ export const createTrip = async (
   let tripId: number;
   try {
     const result = await tx.execute({
-      sql: "INSERT INTO trips (name, days) VALUES (?, ?)",
-      args: [name, days],
+      sql: "INSERT INTO trips (user_id, name, days) VALUES (?, ?, ?)",
+      args: [session.user.id, name, days],
     });
     tripId = Number(result.lastInsertRowid);
     await tx.batch(
@@ -75,12 +77,24 @@ export const setItemPacked = async (
   itemId: number,
   packed: boolean
 ) => {
+  const session = await requireSession();
+  const validTripId = toId(tripId);
   const db = await getDb();
   await db.execute({
-    sql: "UPDATE items SET packed = ? WHERE id = ? AND trip_id = ?",
-    args: [packed ? 1 : 0, toId(itemId), toId(tripId)],
+    sql: `UPDATE items
+      SET packed = ?
+      WHERE id = ?
+        AND trip_id = ?
+        AND EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ?)`,
+    args: [
+      packed ? 1 : 0,
+      toId(itemId),
+      validTripId,
+      validTripId,
+      session.user.id,
+    ],
   });
-  revalidatePath(`/trips/${tripId}`);
+  revalidatePath(`/trips/${validTripId}`);
 };
 
 export const setItemQuantity = async (
@@ -88,15 +102,21 @@ export const setItemQuantity = async (
   itemId: number,
   quantity: number
 ) => {
+  const session = await requireSession();
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
     throw new Error("Invalid quantity");
   }
+  const validTripId = toId(tripId);
   const db = await getDb();
   await db.execute({
-    sql: "UPDATE items SET quantity = ? WHERE id = ? AND trip_id = ?",
-    args: [quantity, toId(itemId), toId(tripId)],
+    sql: `UPDATE items
+      SET quantity = ?
+      WHERE id = ?
+        AND trip_id = ?
+        AND EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ?)`,
+    args: [quantity, toId(itemId), validTripId, validTripId, session.user.id],
   });
-  revalidatePath(`/trips/${tripId}`);
+  revalidatePath(`/trips/${validTripId}`);
 };
 
 export const addItem = async (
@@ -104,36 +124,52 @@ export const addItem = async (
   rawName: string,
   rawCategory: string
 ) => {
+  const session = await requireSession();
   const name = cleanName(rawName);
   if (name === null) {
     throw new Error("Invalid name");
   }
   const category: Category =
     CATEGORIES.find((c) => c === rawCategory) ?? "Extras";
+  const validTripId = toId(tripId);
   const db = await getDb();
   await db.execute({
-    sql: "INSERT INTO items (trip_id, name, category, quantity) SELECT id, ?, ?, 1 FROM trips WHERE id = ?",
-    args: [name, category, toId(tripId)],
+    sql: "INSERT INTO items (trip_id, name, category, quantity) SELECT id, ?, ?, 1 FROM trips WHERE id = ? AND user_id = ?",
+    args: [name, category, validTripId, session.user.id],
   });
-  revalidatePath(`/trips/${tripId}`);
+  revalidatePath(`/trips/${validTripId}`);
 };
 
 export const deleteItem = async (tripId: number, itemId: number) => {
+  const session = await requireSession();
+  const validTripId = toId(tripId);
   const db = await getDb();
   await db.execute({
-    sql: "DELETE FROM items WHERE id = ? AND trip_id = ?",
-    args: [toId(itemId), toId(tripId)],
+    sql: `DELETE FROM items
+      WHERE id = ?
+        AND trip_id = ?
+        AND EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ?)`,
+    args: [toId(itemId), validTripId, validTripId, session.user.id],
   });
-  revalidatePath(`/trips/${tripId}`);
+  revalidatePath(`/trips/${validTripId}`);
 };
 
 export const deleteTrip = async (tripId: number) => {
+  const session = await requireSession();
   const id = toId(tripId);
   const db = await getDb();
   await db.batch(
     [
-      { sql: "DELETE FROM items WHERE trip_id = ?", args: [id] },
-      { sql: "DELETE FROM trips WHERE id = ?", args: [id] },
+      {
+        sql: `DELETE FROM items
+          WHERE trip_id = ?
+            AND EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ?)`,
+        args: [id, id, session.user.id],
+      },
+      {
+        sql: "DELETE FROM trips WHERE id = ? AND user_id = ?",
+        args: [id, session.user.id],
+      },
     ],
     "write"
   );

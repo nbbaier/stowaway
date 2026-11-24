@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { DeleteTripButton } from "@/components/delete-trip-button";
 import { PackingList } from "@/components/packing-list";
 import { getTripWithItems, isDbConfigured } from "@/lib/db";
+import { requireSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,8 @@ export default async function TripPage({
     notFound();
   }
 
-  const data = await getTripWithItems(tripId);
+  const session = await requireSession();
+  const data = await getTripWithItems(tripId, session.user.id);
   if (!data) {
     notFound();
   }
