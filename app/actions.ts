@@ -6,7 +6,29 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { buildDefaultList, CATEGORIES, MAX_DAYS } from "@/lib/defaults";
 import type { Category } from "@/lib/defaults";
+import {
+  clearPassphraseSession,
+  createPassphraseSession,
+} from "@/lib/passphrase-auth";
 import { requireSession } from "@/lib/session";
+
+export const signInWithPassphrase = async (
+  formData: FormData
+): Promise<void> => {
+  const passphrase = formData.get("passphrase");
+  if (
+    typeof passphrase !== "string" ||
+    !(await createPassphraseSession(passphrase))
+  ) {
+    redirect("/sign-in?error=invalid");
+  }
+  redirect("/");
+};
+
+export const signOut = async (): Promise<void> => {
+  await clearPassphraseSession();
+  redirect("/sign-in");
+};
 
 const toId = (value: unknown) => {
   const id = Number(value);

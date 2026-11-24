@@ -1,6 +1,8 @@
 import { createClient } from "@libsql/client";
 import type { Client } from "@libsql/client";
 
+import { PRIVATE_NAMESPACE_ID } from "@/lib/namespace";
+
 let client: Client | null = null;
 let schemaReady: Promise<void> | null = null;
 
@@ -49,6 +51,28 @@ const initSchema = async (db: Client): Promise<void> => {
     await db.execute(
       "CREATE INDEX IF NOT EXISTS trips_user_id_idx ON trips(user_id)"
     );
+    await db.execute(
+      "CREATE TABLE IF NOT EXISTS app_migrations (id TEXT PRIMARY KEY)"
+    );
+    const tx = await db.transaction("write");
+    try {
+      const migration = await tx.execute({
+        sql: "INSERT OR IGNORE INTO app_migrations (id) VALUES (?)",
+        args: ["private-namespace-v1"],
+      });
+      if (migration.rowsAffected === 1) {
+        await tx.execute({
+          sql: "UPDATE trips SET user_id = ? WHERE user_id IS NULL OR user_id != ?",
+          args: [PRIVATE_NAMESPACE_ID, PRIVATE_NAMESPACE_ID],
+        });
+      }
+      await tx.commit();
+    } catch (error) {
+      await tx.rollback();
+      throw error;
+    } finally {
+      tx.close();
+    }
   } catch (error: unknown) {
     schemaReady = null;
     throw error;

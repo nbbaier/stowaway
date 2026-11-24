@@ -5,12 +5,13 @@ import { NewTripForm } from "@/components/new-trip-form";
 import { SetupNotice } from "@/components/setup-notice";
 import { SignOutButton } from "@/components/sign-out-button";
 import { isDbConfigured, listTrips } from "@/lib/db";
+import { isPassphraseAuthConfigured } from "@/lib/passphrase-auth";
 import { requireSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const configured = isDbConfigured();
+  const configured = isDbConfigured() && isPassphraseAuthConfigured();
   const session = configured ? await requireSession() : null;
   const trips = session ? await listTrips(session.user.id) : [];
 
@@ -24,7 +25,7 @@ export default async function HomePage() {
           {session && (
             <div className="flex items-center gap-3">
               <span className="text-muted-foreground text-sm">
-                {session.user.email}
+                Private space
               </span>
               <SignOutButton />
             </div>
