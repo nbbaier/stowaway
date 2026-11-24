@@ -2,7 +2,6 @@
   "name": "stowaway",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@12.3.4",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -38,5 +37,6 @@
     "tailwindcss": "^4.3.5",
     "typescript": "7.0.2",
     "ultracite": "8.2.1"
-  }
+  },
+  "packageManager": "pnpm@12.3.4"
 }

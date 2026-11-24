@@ -1,25 +1,28 @@
-import Link from 'next/link'
-import { isDbConfigured, listTrips } from '@/lib/db'
-import { NewTripForm } from '@/components/new-trip-form'
-import { LuggageTag } from '@/components/luggage-tag'
-import { SetupNotice } from '@/components/setup-notice'
+import Link from "next/link";
 
-export const dynamic = 'force-dynamic'
+import { LuggageTag } from "@/components/luggage-tag";
+import { NewTripForm } from "@/components/new-trip-form";
+import { SetupNotice } from "@/components/setup-notice";
+import { isDbConfigured, listTrips } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const configured = isDbConfigured()
-  const trips = configured ? await listTrips() : []
+  const configured = isDbConfigured();
+  const trips = configured ? await listTrips() : [];
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-5xl flex-col gap-12 px-4 py-12 md:py-20">
       <header className="flex flex-col gap-3">
-        <span className="font-heading text-sm font-bold tracking-widest text-primary uppercase">Stowaway</span>
-        <h1 className="max-w-2xl font-heading text-4xl font-bold text-balance md:text-6xl">
+        <span className="font-heading text-primary text-sm font-bold tracking-widest uppercase">
+          Stowaway
+        </span>
+        <h1 className="font-heading max-w-2xl text-4xl font-bold text-balance md:text-6xl">
           Tell us how long. We&apos;ll start the list.
         </h1>
-        <p className="max-w-xl leading-relaxed text-pretty text-muted-foreground">
-          Enter your trip length and get a packing list with quantities already worked out. Tweak it, tick things off,
-          and come back to it anytime.
+        <p className="text-muted-foreground max-w-xl leading-relaxed text-pretty">
+          Enter your trip length and get a packing list with quantities already
+          worked out. Tweak it, tick things off, and come back to it anytime.
         </p>
       </header>
 
@@ -36,7 +39,7 @@ export default async function HomePage() {
             Your trips
           </h2>
           {trips.length === 0 ? (
-            <p className="rounded-xl border border-dashed p-6 text-sm leading-relaxed text-muted-foreground">
+            <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-sm leading-relaxed">
               No trips yet. Your packing lists will show up here.
             </p>
           ) : (
@@ -45,9 +48,14 @@ export default async function HomePage() {
                 <li key={trip.id}>
                   <Link
                     href={`/trips/${trip.id}`}
-                    className="block transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    className="focus-visible:outline-ring block transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2"
                   >
-                    <LuggageTag name={trip.name} days={trip.days} packed={trip.packedCount} total={trip.itemCount} />
+                    <LuggageTag
+                      name={trip.name}
+                      days={trip.days}
+                      packed={trip.packedCount}
+                      total={trip.itemCount}
+                    />
                   </Link>
                 </li>
               ))}
@@ -56,5 +64,5 @@ export default async function HomePage() {
         </section>
       </div>
     </main>
-  )
+  );
 }
