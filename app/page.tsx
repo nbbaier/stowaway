@@ -13,7 +13,7 @@ export default async function HomePage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-5xl flex-col gap-12 px-4 py-12 md:py-20">
       <header className="flex flex-col gap-3">
-        <span className="font-heading text-sm font-bold tracking-widest text-primary uppercase">Tagalong</span>
+        <span className="font-heading text-sm font-bold tracking-widest text-primary uppercase">Daypack</span>
         <h1 className="max-w-2xl font-heading text-4xl font-bold text-balance md:text-6xl">
           Tell us how long. We&apos;ll start the list.
         </h1>
