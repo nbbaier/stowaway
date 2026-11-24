@@ -1,24 +1,55 @@
-'use client'
+"use client";
 
-import { useTransition } from 'react'
-import { Trash2 } from 'lucide-react'
-import { deleteTrip } from '@/app/actions'
-import { Button } from '@/components/ui/button'
+import { Trash2 } from "lucide-react";
+import { useState, useTransition } from "react";
 
-export function DeleteTripButton({ tripId }: { tripId: number }) {
-  const [pending, startTransition] = useTransition()
+import { deleteTrip } from "@/app/actions";
+import { Button } from "@/components/ui/button";
+
+export const DeleteTripButton = ({ tripId }: { tripId: number }) => {
+  const [confirming, setConfirming] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <Button
+          variant="destructive"
+          size="sm"
+          disabled={pending}
+          onClick={() => {
+            startTransition(async () => {
+              await deleteTrip(tripId);
+            });
+          }}
+        >
+          {pending ? "Deleting..." : "Confirm delete"}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={pending}
+          onClick={() => {
+            setConfirming(false);
+          }}
+        >
+          Cancel
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <Button
-      variant="ghost"
+      variant="ghost-destructive"
       size="sm"
       disabled={pending}
-      className="text-muted-foreground hover:text-destructive"
       onClick={() => {
-        if (confirm('Delete this trip and its packing list?')) startTransition(() => deleteTrip(tripId))
+        setConfirming(true);
       }}
     >
       <Trash2 />
-      {pending ? 'Deleting...' : 'Delete trip'}
+      Delete trip
     </Button>
-  )
-}
+  );
+};
